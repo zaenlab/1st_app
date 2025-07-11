@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Under Repair List Mobile App</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Icons from Heroicons CDN -->
+<script src="https://unpkg.com/feather-icons"></script>
+<style>
+  /* Scrollbar for table */
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 116, 139, 0.5);
+    border-radius: 10px;
+  }
+</style>
+</head>
+
+<body class="bg-white max-w-md mx-auto min-h-screen flex flex-col">
+
+<header class="p-4 border-b border-gray-300">
+  <h1 class="text-2xl font-semibold">Under Repair List</h1>
+</header>
+
+<section class="p-4 space-y-3 flex-shrink-0 bg-white z-20">
+  <div>
+    <label for="searchInput" class="sr-only">Search</label>
+    <div class="flex border border-gray-300 rounded-full overflow-hidden">
+      <input type="search" id="searchInput" placeholder="Search..." class="flex-grow px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      <button id="searchBtn" class="px-4 bg-green-600 text-white flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <form id="filterForm" class="flex items-center gap-2" onsubmit="return false;">
+    <label for="teamSelect" class="text-sm font-medium">Select team</label>
+    <select id="teamSelect" class="border border-gray-300 rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-green-500">
+      <option value="*">*</option>
+      <!-- Teams option filled dynamically -->
+    </select>
+    <button id="submitFilter" type="submit" class="bg-green-600 text-white text-sm px-4 py-1 rounded hover:bg-green-700 transition">Submit</button>
+  </form>
+</section>
+
+<section class="flex-grow overflow-auto border-t border-gray-300" aria-label="Under repair containers list">
+  <table class="w-full text-sm border-separate border-spacing-0 min-w-max" aria-describedby="tableCaption" role="grid" id="dataTable">
+    <caption id="tableCaption" class="sr-only">List of containers under repair</caption>
+    <thead class="bg-gray-100 sticky top-0 z-10 border-b border-gray-300">
+      <tr>
+        <th class="w-6 p-2 text-left">
+          <input type="checkbox" id="selectAll" aria-label="Select all" />
+        </th>
+        <th class="p-2 text-left">Container No.</th>
+        <th class="p-2 text-left">Owner</th>
+        <th class="p-2 text-left">Type</th>
+        <th class="p-2 text-left">Team</th>
+        <th class="p-2 text-left">Notes</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200" id="tableBody">
+      <!-- Table rows generated dynamically -->
+    </tbody>
+  </table>
+</section>
+
+<!-- Floating Add Button -->
+<button id="btnAdd" aria-label="Add new container entry" 
+  class="fixed bottom-16 left-1/2 -translate-x-1/2 z-30 bg-green-600 hover:bg-green-700 shadow-lg w-16 h-16 rounded-full flex items-center justify-center text-white focus:outline-none focus:ring-4 focus:ring-green-400">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+</button>
+
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 flex justify-around py-2 text-gray-600">
+  <button class="flex flex-col items-center text-xs" aria-label="Home">
+    <i data-feather="home" class="w-5 h-5 mb-1"></i>
+    Home
+  </button>
+  <button class="flex flex-col items-center text-xs" aria-label="List">
+    <i data-feather="list" class="w-5 h-5 mb-1"></i>
+    List
+  </button>
+  <div class="w-16"></div> <!-- space for floating add -->
+  <button class="flex flex-col items-center text-xs" aria-label="Info">
+    <i data-feather="info" class="w-5 h-5 mb-1"></i>
+    Info
+  </button>
+  <button class="flex flex-col items-center text-xs" aria-label="Gallery">
+    <i data-feather="image" class="w-5 h-5 mb-1"></i>
+    Gallery
+  </button>
+</nav>
+
+<!-- Modal/Form Section -->
+<div id="modalBackdrop" aria-hidden="true" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-40">
+  <section role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc"
+    class="bg-white rounded-lg max-w-md w-full p-6 mx-4 shadow-lg max-h-[90vh] overflow-auto relative">
+
+    <h2 id="modalTitle" class="text-lg font-semibold mb-4">Container Detail</h2>
+    <form id="containerForm" class="space-y-4">
+      <div>
+        <label for="containerNo" class="block font-medium mb-1">Container No.</label>
+        <input type="text" id="containerNo" name="containerNo" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label for="owner" class="block font-medium mb-1">Owner</label>
+        <input type="text" id="owner" name="owner" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label for="type" class="block font-medium mb-1">Type</label>
+        <input type="text" id="type" name="type" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label for="team" class="block font-medium mb-1">Team</label>
+        <input type="text" id="team" name="team" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" />
+      </div>
+      <div>
+        <label for="notes" class="block font-medium mb-1">Notes</label>
+        <textarea id="notes" name="notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+      </div>
+      <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+        <button type="button" id="btnDelete" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition hidden">Delete</button>
+        <div class="flex gap-2 ml-auto">
+          <button type="button" id="btnCancel" class="border border-gray-400 px-4 py-2 rounded hover:bg-gray-100">Cancel</button>
+          <button type="submit" id="btnSave" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Save</button>
+        </div>
+      </div>
+    </form>
+
+  </section>
+</div>
+
+<script>
+  feather.replace();
+
+  const API_ENDPOINT = 'https://sheetdb.io/api/v1/7f1hk5d857ifp';
+  let dataCache = [];  // Will store fetched data to reduce API calls
+  let currentEditId = null; // To track current editing row id (containerNo)
+  
+  const tableBody = document.getElementById('tableBody');
+  const searchInput = document.getElementById('searchInput');
+  const teamSelect = document.getElementById('teamSelect');
+  const filterForm = document.getElementById('filterForm');
+  const btnAdd = document.getElementById('btnAdd');
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const containerForm = document.getElementById('containerForm');
+  const btnCancel = document.getElementById('btnCancel');
+  const btnDelete = document.getElementById('btnDelete');
+  const btnSave = document.getElementById('btnSave');
+  const submitFilter = document.getElementById('submitFilter');
+
+  // Columns order for display and for sending to API
+  const columns = ["Container No.", "Owner", "Type", "Team", "Notes"];
+  const apiColumnsKeys = ["container_no", "owner", "type", "team", "notes"]; // mapping: container_no must be unique key
+
+  // Utility: Map data keys to column display names and vice versa
+  // sheetdb.io expects keys in its own JSON key naming; we use friendly display in UI
+
+  // Fetch initial data on load
+  window.addEventListener('load', () => {
+    fetchData();
+  });
+
+  // Fetch data from API (with optional filters)
+  async function fetchData(params = {}) {
+    try {
+      let queryStr = '';
+      // Support search param only on 'container_no' and case-insensitive partial match on frontend
+      if(params.team && params.team !== '*'){
+        queryStr = `?team=${encodeURIComponent(params.team)}`;
+      } 
+      const url = `${API_ENDPOINT}${queryStr}`;
+      const response = await fetch(url);
+      if(!response.ok) throw new Error('Failed to fetch data');
+      const json = await response.json();
+      dataCache = json;
+
+      populateTeamFilterOptions(dataCache);
+      renderTable(filterAndSearchData(dataCache));
+    } catch (error) {
+      alert('Error fetching data: ' + error.message);
+    }
+  }
+
+  // Populate teamSelect options dynamically from data
+  function populateTeamFilterOptions(data) {
+    const existingOptions = Array.from(teamSelect.options).map(o => o.value);
+    let teams = new Set();
+    data.forEach(row => {
+      if(row.team) teams.add(row.team.trim());
+    });
+    // Clear current options except '*'
+    teamSelect.innerHTML = '<option value="*">*</option>';
+    Array.from(teams).sort().forEach(team => {
+      const option = document.createElement('option');
+      option.value = team;
+      option.textContent = team;
+      teamSelect.appendChild(option);
+    });
+  }
+
+  // Render table rows from data
+  function renderTable(data) {
+    tableBody.innerHTML = '';
+    if(data.length === 0){
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length + 1;
+      td.className = 'p-4 text-center text-gray-500';
+      td.textContent = 'No data found.';
+      tr.appendChild(td);
+      tableBody.appendChild(tr);
+      return;
+    }
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.tabIndex = 0; // Make row keyboard focusable for accessibility
+      tr.className = "hover:bg-green-50 cursor-pointer";
+      // Checkbox cell
+      const tdCheck = document.createElement('td');
+      tdCheck.className = 'p-2 text-center';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      tdCheck.appendChild(checkbox);
+      tr.appendChild(tdCheck);
+
+      // Data columns (Container No, Owner, Type, Team, Notes)
+      columns.forEach(col => {
+        const td = document.createElement('td');
+        td.className = 'p-2';
+        td.textContent = row[mapColumnNameToKey(col)] || '';
+        tr.appendChild(td);
+      });
+
+      // Attach click handler on row (except checkbox) to open detail view
+      tr.addEventListener('click', e => {
+        if(e.target.type === 'checkbox') return; // skip when checkbox clicked
+        e.preventDefault();
+        openEditForm(row);
+      });
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  // Map friendly column name to API key
+  function mapColumnNameToKey(colName) {
+    switch(colName){
+      case "Container No.": return "container_no";
+      case "Owner": return "owner";
+      case "Type": return "type";
+      case "Team": return "team";
+      case "Notes": return "notes";
+      default: return colName.toLowerCase();
+    }
+  }
+
+  // Filtering and searching data client-side (simple)
+  function filterAndSearchData(data) {
+    const searchVal = searchInput.value.trim().toLowerCase();
+    const selectedTeam = teamSelect.value;
+
+    return data.filter(d => {
+      const matchesSearch = !searchVal || 
+        (d.container_no && d.container_no.toLowerCase().includes(searchVal)) ||
+        (d.owner && d.owner.toLowerCase().includes(searchVal)) ||
+        (d.type && d.type.toLowerCase().includes(searchVal)) ||
+        (d.team && d.team.toLowerCase().includes(searchVal)) ||
+        (d.notes && d.notes.toLowerCase().includes(searchVal));
+
+      const matchesTeam = selectedTeam === '*' || (d.team && d.team === selectedTeam);
+
+      return matchesSearch && matchesTeam;
+    });
+  }
+
+  // Handlers
+  document.getElementById('searchBtn').addEventListener('click', () => {
+    renderTable(filterAndSearchData(dataCache));
+  });
+  searchInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter') {
+      e.preventDefault();
+      renderTable(filterAndSearchData(dataCache));
+    }
+  });
+
+  filterForm.addEventListener('submit', e => {
+    e.preventDefault();
+    renderTable(filterAndSearchData(dataCache));
+  });
+
+  // Add new container button click opens empty form
+  btnAdd.addEventListener('click', openAddForm);
+
+  // Cancel button closes modal
+  btnCancel.addEventListener('click', closeModal);
+
+  // Delete button triggers delete action
+  btnDelete.addEventListener('click', deleteContainer);
+
+  // Save button handles form submit to create/update container
+  containerForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    await saveContainer();
+  });
+
+  // Open form to add new empty entry
+  function openAddForm() {
+    currentEditId = null;
+    fillFormWithData({
+      container_no: '',
+      owner: '',
+      type: '',
+      team: '',
+      notes: ''
+    });
+    btnDelete.style.display = 'none';
+    openModal();
+  }
+
+  // Open form to edit existing data
+  function openEditForm(data) {
+    currentEditId = data.container_no;
+    fillFormWithData(data);
+    btnDelete.style.display = 'inline-block';
+    openModal();
+  }
+
+  // Fill form fields from data object
+  function fillFormWithData(data){
+    containerForm.containerNo.value = data.container_no || '';
+    containerForm.owner.value = data.owner || '';
+    containerForm.type.value = data.type || '';
+    containerForm.team.value = data.team || '';
+    containerForm.notes.value = data.notes || '';
+    containerForm.containerNo.disabled = currentEditId !== null; // disable containerNo if editing existing
+  }
+
+  // Open modal
+  function openModal(){
+    modalBackdrop.classList.remove('hidden');
+    modalBackdrop.setAttribute('aria-hidden', 'false');
+    containerForm.containerNo.focus();
+  }
+  // Close modal
+  function closeModal(){
+    modalBackdrop.classList.add('hidden');
+    modalBackdrop.setAttribute('aria-hidden', 'true');
+    currentEditId = null;
+  }
+
+  // Save container data via API (POST for new, PATCH for update)
+  async function saveContainer(){
+    const formData = {
+      container_no: containerForm.containerNo.value.trim(),
+      owner: containerForm.owner.value.trim(),
+      type: containerForm.type.value.trim(),
+      team: containerForm.team.value.trim(),
+      notes: containerForm.notes.value.trim()
+    };
+    if(formData.container_no === ''){
+      alert("Container No. is required.");
+      return;
+    }
+
+    try {
+      if(currentEditId === null) {
+        // New entry (POST)
+        const res = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ data: formData }),
+        });
+        if(!res.ok) throw new Error('Failed to add new container');
+      } else {
+        // Update existing (PATCH)
+        // SheetDB API expects filter by key-value pair in URL param: https://sheetdb.io/docs/#update
+        const urlPatch = `${API_ENDPOINT}/container_no/${encodeURIComponent(currentEditId)}`;
+        const res = await fetch(urlPatch, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ data: formData }),
+        });
+        if(!res.ok) throw new Error('Failed to update container');
+      }
+      await fetchData(); // reload table data
+      closeModal();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  // Delete container entry
+  async function deleteContainer(){
+    if(!confirm(`Are you sure you want to delete container "${currentEditId}"?`)) return;
+    try {
+      const urlDelete = `${API_ENDPOINT}/container_no/${encodeURIComponent(currentEditId)}`;
+      const res = await fetch(urlDelete, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      if(!res.ok) throw new Error('Failed to delete container');
+      await fetchData();
+      closeModal();
+    } catch(err) {
+      alert(err.message);
+    }
+  }
+
+  // Accessibility: close modal on backdrop click
+  modalBackdrop.addEventListener('click', (e) => {
+    if(e.target === modalBackdrop) closeModal();
+  });
+
+</script>
+
+</body>
+</html>
+
